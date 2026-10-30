@@ -1,0 +1,25 @@
+storage:
+  className: gp3-retain
+  data:
+    size: 40Gi
+
+keycloakSecretAccess:
+  enabled: false
+
+pgo:
+  replicas: 2
+
+users:
+- name: ignition
+  databases:
+  - solar
+- name: n8n
+  databases:
+  - n8n
+
+n8nSecretAccess:
+  enabled: true
+  secretName: pgo-pguser-n8n
+
+ignitionSecretAccess:
+  enabled: true

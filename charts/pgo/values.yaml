@@ -1,0 +1,26 @@
+pgo:
+  replicas: 2
+
+# pgBackRest backup settings
+backups:
+  # Number of full backups to retain (retention type is "count", schedule is daily,
+  # so this is effectively a retention window in days). The repo1 PVC is 40Gi in
+  # every environment, so raising this on clusters with large data volumes risks
+  # filling the backup repo. Overridden to 3 for mgmt in values/pgo/mgmt/values.yaml.
+  retentionFull: "1"
+
+# Volume sizes. className is set per-environment in values/pgo/{env}/values.yaml.
+# EBS volumes can only grow, so lowering data.size will not shrink existing PVCs.
+storage:
+  data:
+    size: 20Gi
+
+# Database users - each entry creates a user and database(s)
+# PGO auto-generates passwords and stores them in secrets: pgo-pguser-{name}
+users: []
+
+# Enable ClusterSecretStore for ignition to read database credentials
+# This creates RBAC and a ClusterSecretStore that site namespaces can use
+ignitionSecretAccess:
+  enabled: false
+  secretName: pgo-pguser-ignition

@@ -1,0 +1,312 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: keycloak-operator-clusterrole
+  labels:
+    {{- include "keycloak.labels" . | nindent 4 }}
+rules:
+  - apiGroups:
+      - config.openshift.io
+    resources:
+      - ingresses
+    verbs:
+      - get
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    {{- include "keycloak.labels" . | nindent 4 }}
+  name: keycloakrealmimportcontroller-cluster-role
+rules:
+  - apiGroups:
+      - k8s.keycloak.org
+    resources:
+      - keycloakrealmimports
+      - keycloakrealmimports/status
+      - keycloakrealmimports/finalizers
+    verbs:
+      - get
+      - list
+      - watch
+      - patch
+      - update
+      - create
+      - delete
+  - apiGroups:
+      - batch
+    resources:
+      - jobs
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - watch
+  - apiGroups:
+      - ""
+    resources:
+      - secrets
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    {{- include "keycloak.labels" . | nindent 4 }}
+  name: keycloakcontroller-cluster-role
+rules:
+  - apiGroups:
+      - k8s.keycloak.org
+    resources:
+      - keycloaks
+      - keycloaks/status
+      - keycloaks/finalizers
+    verbs:
+      - get
+      - list
+      - watch
+      - patch
+      - update
+      - create
+      - delete
+  - apiGroups:
+      - ""
+    resources:
+      - services
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - apps
+    resources:
+      - statefulsets
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - networking.k8s.io
+    resources:
+      - ingresses
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - ""
+    resources:
+      - secrets
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - networking.k8s.io
+    resources:
+      - networkpolicies
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - monitoring.coreos.com
+    resources:
+      - servicemonitors
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - ""
+    resources:
+      - configmaps
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - ""
+    resources:
+      - pods
+    verbs:
+      - list
+  - apiGroups:
+      - ""
+    resources:
+      - pods/log
+    verbs:
+      - get
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    {{- include "keycloak.labels" . | nindent 4 }}
+  name: keycloaksamlclientcontroller-cluster-role
+rules:
+  - apiGroups:
+      - k8s.keycloak.org
+    resources:
+      - keycloaksamlclients
+      - keycloaksamlclients/status
+      - keycloaksamlclients/finalizers
+    verbs:
+      - get
+      - list
+      - watch
+      - patch
+      - update
+      - create
+      - delete
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    {{- include "keycloak.labels" . | nindent 4 }}
+  name: keycloakoidcclientcontroller-cluster-role
+rules:
+  - apiGroups:
+      - k8s.keycloak.org
+    resources:
+      - keycloakoidcclients
+      - keycloakoidcclients/status
+      - keycloakoidcclients/finalizers
+    verbs:
+      - get
+      - list
+      - watch
+      - patch
+      - update
+      - create
+      - delete
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  labels:
+    {{- include "keycloak.labels" . | nindent 4 }}
+  name: keycloak-operator-clusterrole-binding
+roleRef:
+  kind: ClusterRole
+  apiGroup: rbac.authorization.k8s.io
+  name: keycloak-operator-clusterrole
+subjects:
+  - kind: ServiceAccount
+    name: keycloak-operator
+    namespace: keycloak
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  labels:
+    {{- include "keycloak.labels" . | nindent 4 }}
+  name: keycloakrealmimportcontroller-role-binding
+roleRef:
+  kind: ClusterRole
+  apiGroup: rbac.authorization.k8s.io
+  name: keycloakrealmimportcontroller-cluster-role
+subjects:
+  - kind: ServiceAccount
+    name: keycloak-operator
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  labels:
+    {{- include "keycloak.labels" . | nindent 4 }}
+  name: keycloakcontroller-role-binding
+roleRef:
+  kind: ClusterRole
+  apiGroup: rbac.authorization.k8s.io
+  name: keycloakcontroller-cluster-role
+subjects:
+  - kind: ServiceAccount
+    name: keycloak-operator
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  labels:
+    {{- include "keycloak.labels" . | nindent 4 }}
+  name: keycloaksamlclientcontroller-role-binding
+roleRef:
+  kind: ClusterRole
+  apiGroup: rbac.authorization.k8s.io
+  name: keycloaksamlclientcontroller-cluster-role
+subjects:
+  - kind: ServiceAccount
+    name: keycloak-operator
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  labels:
+    {{- include "keycloak.labels" . | nindent 4 }}
+  name: keycloakoidcclientcontroller-role-binding
+roleRef:
+  kind: ClusterRole
+  apiGroup: rbac.authorization.k8s.io
+  name: keycloakoidcclientcontroller-cluster-role
+subjects:
+  - kind: ServiceAccount
+    name: keycloak-operator
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  labels:
+    {{- include "keycloak.labels" . | nindent 4 }}
+  name: keycloak-operator-view
+roleRef:
+  kind: ClusterRole
+  apiGroup: rbac.authorization.k8s.io
+  name: view
+subjects:
+  - kind: ServiceAccount
+    name: keycloak-operator
+{{- if .Values.pgoSecretSync.enabled }}
+---
+# ServiceAccount for reading PGO secrets (used by External Secrets)
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ .Values.pgoSecretSync.serviceAccountName | default "keycloak-pgo-reader" }}
+  namespace: {{ .Release.Namespace }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "-2"
+  labels:
+    {{- include "keycloak.labels" . | nindent 4 }}
+{{- end }}

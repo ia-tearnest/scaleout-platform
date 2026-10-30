@@ -1,0 +1,20 @@
+# Default values — overrides live in values/stoker-operator/
+stoker-operator:
+  # Two replicas keep the sidecar-injection webhook reachable while one pod is
+  # rescheduled. The webhook server runs on every replica (not leader-gated), so a
+  # single-replica controller drops all injection during its own reschedule — a node
+  # rotation then admits gateway pods with no agent (webhook is failurePolicy: Ignore)
+  # and they silently freeze on a stale ref. Leader election (on by default) keeps
+  # reconciliation single-writer. Paired with the PodDisruptionBudget in templates/.
+  replicaCount: 2
+  affinity:
+    podAntiAffinity:
+      # Spread the replicas across nodes so losing one node can't take out both.
+      preferredDuringSchedulingIgnoredDuringExecution:
+        - weight: 100
+          podAffinityTerm:
+            topologyKey: kubernetes.io/hostname
+            labelSelector:
+              matchLabels:
+                app.kubernetes.io/name: stoker-operator
+                control-plane: controller-manager

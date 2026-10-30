@@ -1,0 +1,105 @@
+kargo:
+  api:
+    host: kargo.mgmt.example.com
+
+    # OIDC configuration for Keycloak SSO (to be configured by coworker)
+    oidc:
+      enabled: true
+      issuerURL: https://auth.example.com/realms/example
+      clientID: kargo
+      dex:
+        enabled: false
+      additionalScopes:
+        - groups
+        - email
+      admins:
+        claims:
+          groups:
+            - kargo-admins
+      viewers:
+        claims:
+          groups:
+            - kargo-viewers
+
+    # Reference secret for admin credentials (temporary until Keycloak SSO)
+    secret:
+      name: kargo-admin-secret
+
+    adminAccount:
+      enabled: true
+
+    # TLS terminated at ALB
+    tls:
+      enabled: false
+      terminatedUpstream: true
+
+    service:
+      type: ClusterIP
+
+    ingress:
+      enabled: true
+      ingressClassName: alb
+      annotations:
+        kubernetes.io/ingress.class: alb
+        alb.ingress.kubernetes.io/scheme: internet-facing
+        alb.ingress.kubernetes.io/target-type: ip
+        alb.ingress.kubernetes.io/backend-protocol: HTTP
+        alb.ingress.kubernetes.io/load-balancer-name: alb-mgmt-ext
+        alb.ingress.kubernetes.io/ssl-policy: ELBSecurityPolicy-TLS13-1-3-PQ-2025-09
+        alb.ingress.kubernetes.io/group.name: alb-mgmt-ext-group
+        alb.ingress.kubernetes.io/listen-ports: '[{"HTTPS":443}]'
+        alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:us-west-2:123456789012:certificate/00000000-0000-0000-0000-000000000000
+        alb.ingress.kubernetes.io/success-codes: 200,302
+        external-dns.alpha.kubernetes.io/ttl: "60"
+        external-dns.alpha.kubernetes.io/hostname: kargo.mgmt.example.com
+      tls:
+        enabled: false
+      pathType: Prefix
+
+    # ArgoCD URLs for deep links in Kargo UI
+    argocd:
+      urls:
+        "": https://argocd.mgmt.example.com
+
+  # ArgoCD integration for controller
+  controller:
+    argocd:
+      integrationEnabled: true
+      namespace: argocd
+
+  # External webhooks server for receiving GitHub tag creation events
+  externalWebhooksServer:
+    enabled: true
+    host: kargo-webhooks.mgmt.example.com
+
+    # TLS terminated at ALB
+    tls:
+      enabled: false
+      terminatedUpstream: true
+
+    service:
+      type: ClusterIP
+
+    ingress:
+      enabled: true
+      ingressClassName: alb
+      annotations:
+        kubernetes.io/ingress.class: alb
+        alb.ingress.kubernetes.io/scheme: internet-facing
+        alb.ingress.kubernetes.io/target-type: ip
+        alb.ingress.kubernetes.io/backend-protocol: HTTP
+        alb.ingress.kubernetes.io/load-balancer-name: alb-mgmt-ext
+        alb.ingress.kubernetes.io/ssl-policy: ELBSecurityPolicy-TLS13-1-3-PQ-2025-09
+        alb.ingress.kubernetes.io/group.name: alb-mgmt-ext-group
+        alb.ingress.kubernetes.io/listen-ports: '[{"HTTPS":443}]'
+        alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:us-west-2:123456789012:certificate/00000000-0000-0000-0000-000000000000
+        alb.ingress.kubernetes.io/success-codes: "200,404"
+        alb.ingress.kubernetes.io/healthcheck-path: /healthz
+        alb.ingress.kubernetes.io/healthcheck-protocol: HTTP
+        external-dns.alpha.kubernetes.io/ttl: "60"
+        external-dns.alpha.kubernetes.io/hostname: kargo-webhooks.mgmt.example.com
+      hosts:
+        - kargo-webhooks.mgmt.example.com
+      pathType: Prefix
+      tls:
+        enabled: false

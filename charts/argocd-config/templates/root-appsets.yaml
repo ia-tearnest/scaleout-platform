@@ -1,0 +1,25 @@
+# Root Application that deploys all ApplicationSets from appsets/ directory
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: root-appsets
+  namespace: argocd
+  annotations:
+    "helm.sh/resource-policy": keep
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: mgmt
+  source:
+    repoURL: 'git@github.com:example-org/platform.git'
+    path: appsets
+    targetRevision: main
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argocd
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=false

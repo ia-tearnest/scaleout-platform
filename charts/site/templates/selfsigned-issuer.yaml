@@ -1,0 +1,112 @@
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: selfsigned-issuer
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+spec:
+  selfSigned: {}
+{{- if .Values.sharedGanCA.create }}
+---
+# Bootstrap ClusterIssuer - creates self-signed certs (used to generate the shared CA)
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: selfsigned-cluster-issuer
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+spec:
+  selfSigned: {}
+---
+# Shared GAN CA certificate - single CA used by all site namespaces
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: {{ .Values.sharedGanCA.name }}
+  namespace: cert-manager
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+spec:
+  isCA: true
+  commonName: {{ .Values.sharedGanCA.name }}
+  secretName: {{ .Values.sharedGanCA.name }}
+  duration: 17520h # 2 years
+  privateKey:
+    algorithm: ECDSA
+    size: 256
+  issuerRef:
+    name: selfsigned-cluster-issuer
+    kind: ClusterIssuer
+    group: cert-manager.io
+---
+# Shared GAN CA ClusterIssuer - all sites reference this to get GAN certs
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: {{ .Values.sharedGanCA.name }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+spec:
+  ca:
+    secretName: {{ .Values.sharedGanCA.name }}
+---
+# RBAC for ESO to read the GAN CA secret from cert-manager namespace
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: gan-ca-reader
+  namespace: cert-manager
+  annotations:
+    argocd.argoproj.io/sync-wave: "-2"
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: gan-ca-secret-reader
+  namespace: cert-manager
+  annotations:
+    argocd.argoproj.io/sync-wave: "-2"
+rules:
+  - apiGroups: [""]
+    resources: ["secrets"]
+    resourceNames: ["{{ .Values.sharedGanCA.name }}"]
+    verbs: ["get"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: gan-ca-reads-cert-manager-secrets
+  namespace: cert-manager
+  annotations:
+    argocd.argoproj.io/sync-wave: "-2"
+roleRef:
+  kind: Role
+  name: gan-ca-secret-reader
+  apiGroup: rbac.authorization.k8s.io
+subjects:
+  - kind: ServiceAccount
+    name: gan-ca-reader
+    namespace: cert-manager
+---
+# ClusterSecretStore for ESO to read GAN CA from cert-manager namespace
+apiVersion: external-secrets.io/v1
+kind: ClusterSecretStore
+metadata:
+  name: gan-ca-credentials
+  annotations:
+    argocd.argoproj.io/sync-wave: "-2"
+spec:
+  provider:
+    kubernetes:
+      remoteNamespace: cert-manager
+      server:
+        caProvider:
+          type: ConfigMap
+          name: kube-root-ca.crt
+          namespace: kube-system
+          key: ca.crt
+      auth:
+        serviceAccount:
+          name: gan-ca-reader
+          namespace: cert-manager
+{{- end }}

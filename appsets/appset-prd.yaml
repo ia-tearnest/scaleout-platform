@@ -1,0 +1,81 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: appset-prd
+  namespace: argocd
+spec:
+  goTemplate: true
+  goTemplateOptions: ["missingkey=error"]
+  generators:
+  - matrix:
+      generators:
+        - clusters:
+            selector:
+              matchLabels:
+                env: "prd"
+        - git:
+            repoURL: git@github.com:example-org/platform.git
+            revision: main
+            files:
+            - path: values/*/prd/config.yaml
+  ignoreApplicationDifferences:
+    - jsonPointers:
+        - /spec/syncPolicy/automated
+  # This sync policy pertains to the ApplicationSet, not to the Applications it creates.
+  syncPolicy:
+    # Auto-delete Applications when config files are removed
+    applicationsSync: create-delete
+    # Delete child resources when Application is deleted
+    preserveResourcesOnDeletion: false
+  template:
+    metadata:
+      name: '{{ index .path.segments 1 }}-{{ .name }}'
+      finalizers: []  # Resources cleaned up by namespace deletion
+      labels:
+        env: '{{ .metadata.labels.env }}'
+      annotations:
+        kargo.akuity.io/authorized-stage: kargo-example:prd
+    spec:
+      project: prd
+      sources:
+      - repoURL: 'git@github.com:example-org/platform.git'
+        path: 'charts/{{ dig "chartPath" (index .path.segments 1) . }}'
+        targetRevision: main
+        helm:
+          releaseName: '{{ index .path.segments 1 }}'
+          valueFiles:
+          - '$values/values/{{ index .path.segments 1 }}/common-values.yaml'
+          - '$values/values/site-common/prd/values.yaml'
+          - '$values/values/{{ index .path.segments 1 }}/prd/values.yaml'
+          ignoreMissingValueFiles: true
+      - repoURL: 'git@github.com:example-org/platform.git'
+        targetRevision: main
+        ref: values
+      destination:
+        server: '{{ .server }}'
+        namespace: '{{ dig "namespace" (index .path.segments 1) . }}'
+      ignoreDifferences:
+      - group: "apps"
+        kind: "StatefulSet"
+        jqPathExpressions:
+          - ".spec.volumeClaimTemplates[].apiVersion"
+          - ".spec.volumeClaimTemplates[].kind"
+      - group: "external-secrets.io"
+        kind: "ExternalSecret"
+        jqPathExpressions:
+          - .spec.data[].remoteRef.conversionStrategy
+          - .spec.data[].remoteRef.decodingStrategy
+          - .spec.data[].remoteRef.metadataPolicy
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        retry:
+          limit: 5
+          backoff:
+            duration: 5s
+            factor: 2
+            maxDuration: 5m
+        syncOptions:
+        - ServerSideApply=true
+        - CreateNamespace=true

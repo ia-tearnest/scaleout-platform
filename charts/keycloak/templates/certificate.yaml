@@ -1,0 +1,23 @@
+{{- if .Values.certificate }}
+{{- if .Values.certificate.enabled }}
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+  labels:
+    {{- include "keycloak.labels" . | nindent 4 }}
+  name: keycloak-tls
+spec:
+  commonName: {{ .Values.ingress.hostname }}
+  dnsNames:
+  - {{ .Values.ingress.hostname }}
+  issuerRef:
+    kind: {{ .Values.certificate.issuerKind | default "ClusterIssuer" }}
+    name: {{ .Values.certificate.issuerName | default "letsencrypt-staging" }}
+  secretName: keycloak-tls
+  usages:
+  - digital signature
+  - key encipherment
+{{- end }}
+{{- end }}

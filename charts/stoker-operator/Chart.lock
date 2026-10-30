@@ -1,0 +1,6 @@
+dependencies:
+- name: stoker-operator
+  repository: oci://ghcr.io/knorrlabs/charts
+  version: 0.7.0
+digest: sha256:29ce8430e36f4f9607b9c4430d65397553ecf1782d83ef154e1b66fbca938b85
+generated: "2026-06-23T15:54:17.678723-06:00"

@@ -1,0 +1,68 @@
+apiVersion: k8s.keycloak.org/v2beta1
+kind: Keycloak
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+  labels:
+    {{- include "keycloak.labels" . | nindent 4 }}
+  name: mgmt
+spec:
+  db:
+    host: {{ required "Must supply db host!" .Values.db.host }}
+    passwordSecret:
+      key: password
+      # Synced from the PGO-generated pgo-pguser-keycloak secret by the
+      # ExternalSecret in externalsecrets.yaml (pgoSecretSync.enabled).
+      name: keycloak-db-secret
+    schema: keycloak
+    usernameSecret:
+      key: user
+      name: keycloak-db-secret
+    vendor: postgres
+  hostname:
+    hostname: {{ required "Must supply ingress hostname!" .Values.ingress.hostname }}
+  http:
+    {{- if and .Values.certificate .Values.certificate.enabled }}
+    tlsSecret: keycloak-tls
+    {{- else }}
+    httpEnabled: true
+    {{- end }}
+    {{- with .Values.service.annotations }}
+    annotations:
+      {{- toYaml . | nindent 6 }}
+    {{- end }}
+  ingress:
+    {{- if .Values.ingress.enabled }}
+    enabled: {{ .Values.ingress.useTraefik | ternary false true }}
+    {{- else }}
+    enabled: false
+    {{- end }}
+    {{- with .Values.ingress.annotations }}
+    annotations:
+      {{- toYaml . | nindent 6 }}
+    {{- end }}
+  instances: 2
+  proxy:
+    headers: xforwarded
+  resources:
+    limits:
+      cpu: 2
+      memory: 1500Mi
+    requests:
+      cpu: 1200m
+      memory: 896Mi
+  scheduling:
+    affinity:
+      podAntiAffinity:
+        requiredDuringSchedulingIgnoredDuringExecution:
+        - labelSelector:
+            matchLabels:
+              app.kubernetes.io/instance: mgmt
+          topologyKey: topology.kubernetes.io/zone
+  update:
+    # The default RecreateOnImageChange keys off spec.image, which we leave unset
+    # so the operator supplies the server image via RELATED_IMAGE_KEYCLOAK. That
+    # makes the default a no-op and every upgrade a rolling one, which risks two
+    # server versions against a mid-migration schema. Auto has the operator
+    # inspect the new image and choose rolling vs recreate itself.
+    strategy: Auto

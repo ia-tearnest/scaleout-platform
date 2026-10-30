@@ -1,0 +1,50 @@
+# Site 1 - DEV Environment
+
+# Site Configuration
+site:
+  siteName: "Site 1"
+  location: "Austin, TX"
+  blockCount: 6
+
+# YAML Anchors
+x-gateway-env: &gateway-env
+  # Must match directory in app repo: services/{site,block}/config/resources/{mode}/
+  deploymentMode: dev-cloud
+
+x-ingress-env: &ingress-env-annotations
+  alb.ingress.kubernetes.io/group.name: alb-dev-ext-group
+  alb.ingress.kubernetes.io/load-balancer-name: alb-dev-ext
+  # dev-only override of common-values.yaml ssl-policy (alb-dev-ext-group / alb-dev-ext ALB; applies to be/fe/block1)
+  alb.ingress.kubernetes.io/ssl-policy: ELBSecurityPolicy-TLS13-1-3-PQ-2025-09
+
+# Gateway Configuration
+blockDefaults:
+  gateway:
+    <<: *gateway-env
+
+be:
+  gateway:
+    <<: *gateway-env
+  ingress:
+    annotations:
+      <<: *ingress-env-annotations
+      external-dns.alpha.kubernetes.io/hostname: site1-be.dev.example.com
+    hostOverride: site1-be.dev.example.com
+
+fe:
+  gateway:
+    <<: *gateway-env
+  ingress:
+    annotations:
+      <<: *ingress-env-annotations
+      external-dns.alpha.kubernetes.io/hostname: site1-fe.dev.example.com
+    hostOverride: site1-fe.dev.example.com
+
+block1:
+  gateway:
+    <<: *gateway-env
+  ingress:
+    annotations:
+      <<: *ingress-env-annotations
+      external-dns.alpha.kubernetes.io/hostname: block1.site1.dev.example.com
+    hostOverride: block1.site1.dev.example.com

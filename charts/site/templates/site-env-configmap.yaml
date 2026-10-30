@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: site-env
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+data:
+  DD_SITE_NUMBER: {{ .Values.siteNumber | quote }}
+  DD_SITE_NAME: {{ .Values.site.siteName | quote }}
+  DD_SITE_LOCATION: {{ .Values.site.location | quote }}
+  DD_BLOCK_COUNT: {{ $.Values.site.blockCount | quote }}

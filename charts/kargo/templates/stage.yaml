@@ -1,0 +1,69 @@
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+metadata:
+  name: dev
+  namespace: kargo-example
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
+    kargo.akuity.io/color: "#2286C8"
+spec:
+  requestedFreight:
+  - origin:
+      kind: Warehouse
+      name: releases
+    sources:
+      direct: true
+  promotionTemplate:
+    spec:
+      steps:
+      - task:
+          name: app-promotion
+        as: promote-to-dev
+
+---
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+metadata:
+  name: stg
+  namespace: kargo-example
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
+    kargo.akuity.io/color: "#F5A623"
+spec:
+  requestedFreight:
+  - origin:
+      kind: Warehouse
+      name: releases
+    sources:
+      stages:
+      - dev
+  promotionTemplate:
+    spec:
+      steps:
+      - task:
+          name: app-promotion
+        as: promote-to-stg
+
+---
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+metadata:
+  name: prd
+  namespace: kargo-example
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
+    kargo.akuity.io/color: "#00A368"
+spec:
+  requestedFreight:
+  - origin:
+      kind: Warehouse
+      name: releases
+    sources:
+      stages:
+      - stg
+  promotionTemplate:
+    spec:
+      steps:
+      - task:
+          name: app-promotion
+        as: promote-to-prd

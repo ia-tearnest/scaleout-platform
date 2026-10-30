@@ -1,0 +1,16 @@
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: stoker-operator-controller-manager
+  namespace: {{ .Release.Namespace }}
+spec:
+  # One-at-a-time eviction: a graceful node drain (managed node-group rollout,
+  # Karpenter consolidation) must wait for the evicted replica's replacement to go
+  # Ready before draining the second — so the injection webhook never has zero
+  # endpoints. Safe at replicaCount 1 (maxUnavailable still permits the single pod
+  # to drain), so it can't deadlock a single-replica fallback.
+  maxUnavailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: stoker-operator
+      control-plane: controller-manager

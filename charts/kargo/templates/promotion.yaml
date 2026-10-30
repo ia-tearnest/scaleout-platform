@@ -1,0 +1,52 @@
+apiVersion: kargo.akuity.io/v1alpha1
+kind: PromotionTask
+metadata:
+  name: app-promotion
+  namespace: kargo-example
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  vars:
+  - name: sourceRepo
+    value: git@github.com:example-org/app.git
+  - name: gitopsRepo
+    value: git@github.com:example-org/platform.git
+  steps:
+  # Clone the GitOps platform repository
+  - uses: git-clone
+    config:
+      repoURL: '${{ `{{ vars.gitopsRepo }}` }}'
+      checkout:
+      - branch: main
+        path: ./out
+
+  # Update git.ref for all sites via site-common
+  - uses: yaml-update
+    as: update-git-ref
+    config:
+      path: ./out/values/site-common/${{ `{{ ctx.stage }}` }}/values.yaml
+      updates:
+      - key: stoker.git.ref
+        value: '${{ `{{ commitFrom(vars.sourceRepo).Tag }}` }}'
+
+  # Commit changes
+  - uses: git-commit
+    as: commit
+    config:
+      path: ./out
+      message: 'Update ${{ `{{ ctx.stage }}` }} to ${{ `{{ commitFrom(vars.sourceRepo).Tag }}` }}'
+
+  # Push changes
+  - uses: git-push
+    config:
+      path: ./out
+
+  # Trigger ArgoCD sync for all applications in this stage
+  - uses: argocd-update
+    as: sync-applications
+    config:
+      apps:
+      - namespace: argocd
+        selector:
+          matchLabels:
+            env: ${{ `{{ ctx.stage }}` }}

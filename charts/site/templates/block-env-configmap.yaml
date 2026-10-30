@@ -1,0 +1,14 @@
+{{- range $i := until (int .Values.blockCount) }}
+{{- $blockNum := add1 $i }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: block-{{ $blockNum }}-env
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+data:
+  DD_SITE_NUMBER: {{ $.Values.siteNumber | quote }}
+  DD_SITE_NAME: {{ $.Values.site.siteName | quote }}
+  DD_SITE_LOCATION: {{ $.Values.site.location | quote }}
+{{- end }}

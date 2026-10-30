@@ -1,0 +1,22 @@
+repositories:
+  - name: argoproj
+    url: https://argoproj.github.io/argo-helm
+
+helmDefaults:
+  wait: true
+  waitForJobs: true
+  createNamespace: true
+
+releases:
+  - name: argocd
+    namespace: argocd
+    chart: ../charts/argocd
+    values:
+      - ../values/argocd/common-values.yaml
+      - ../values/argocd/mgmt/values.yaml
+
+  - name: argocd-config
+    namespace: argocd
+    chart: ../charts/argocd-config
+    needs:
+      - argocd/argocd

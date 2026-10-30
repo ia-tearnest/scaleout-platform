@@ -1,0 +1,19 @@
+storage:
+  className: gp3-retain
+
+keycloakSecretAccess:
+  enabled: true
+
+pgo:
+  replicas: 2
+
+users:
+- name: keycloak
+  databases:
+  - keycloak
+
+# Keycloak's realm/client config lives in this cluster's DB and its schema
+# migrations are one-way, so keep extra restore points for rollback. Safe here:
+# mgmt only carries Keycloak (repo1 at ~17M of 40Gi).
+backups:
+  retentionFull: "3"

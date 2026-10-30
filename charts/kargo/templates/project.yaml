@@ -1,0 +1,36 @@
+# Create the namespace explicitly first
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: kargo-example
+  labels:
+    kargo.akuity.io/project: "true"
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+
+---
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Project
+metadata:
+  name: kargo-example
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+
+---
+apiVersion: kargo.akuity.io/v1alpha1
+kind: ProjectConfig
+metadata:
+  name: kargo-example
+  namespace: kargo-example
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  promotionPolicies:
+  - stage: dev
+    autoPromotionEnabled: true
+  - stage: stg
+    autoPromotionEnabled: false
+  - stage: prd
+    autoPromotionEnabled: false
+  # webhookReceivers moved to ClusterConfig (workaround for Kargo 1.9.2 bug)
+  # See: docs/issues/kargo-1.9.2-webhook-cache-bug.md

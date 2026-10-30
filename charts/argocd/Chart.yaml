@@ -1,0 +1,11 @@
+apiVersion: v2
+name: argo-cd
+description: Deploys ArgoCD
+type: application
+version: 1.0.1
+appVersion: "3.2.5"
+
+dependencies:
+- name: argo-cd
+  version: 9.3.4
+  repository: https://argoproj.github.io/argo-helm

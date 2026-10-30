@@ -1,0 +1,66 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: appset-mgmt
+  namespace: argocd
+spec:
+  goTemplate: true
+  goTemplateOptions: ["missingkey=error"]
+  generators:
+  - git:
+      repoURL: git@github.com:example-org/platform.git
+      revision: main
+      files:
+      - path: values/*/mgmt/config.yaml
+  ignoreApplicationDifferences:
+    - jsonPointers:
+        - /spec/syncPolicy/automated
+  # This sync policy pertains to the ApplicationSet, not to the Applications it creates.
+  syncPolicy:
+    # Prevents ApplicationSet controller from deleting Applications. Update is allowed
+    applicationsSync: create-update
+    # Prevent an Application's child resources from being deleted, when the parent Application is deleted
+    preserveResourcesOnDeletion: true
+  template:
+    metadata:
+      name: '{{ index .path.segments 1 }}-mgmt'
+      labels:
+        env: mgmt
+    spec:
+      project: mgmt
+      sources:
+      - repoURL: 'git@github.com:example-org/platform.git'
+        path: 'charts/{{ index .path.segments 1 }}'
+        targetRevision: main
+        helm:
+          releaseName: '{{ index .path.segments 1 }}'
+          valueFiles:
+          - '$values/values/{{ index .path.segments 1 }}/common-values.yaml'
+          - '$values/values/{{ index .path.segments 1 }}/mgmt/values.yaml'
+          ignoreMissingValueFiles: true
+      - repoURL: 'git@github.com:example-org/platform.git'
+        targetRevision: main
+        ref: values
+      destination:
+        server: 'https://kubernetes.default.svc'
+        namespace: '{{ dig "namespace" (index .path.segments 1) . }}'
+      ignoreDifferences:
+      - group: "external-secrets.io"
+        kind: "ExternalSecret"
+        jqPathExpressions:
+          - .spec.data[].remoteRef.conversionStrategy
+          - .spec.data[].remoteRef.decodingStrategy
+          - .spec.data[].remoteRef.metadataPolicy
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        retry:
+          limit: 5
+          backoff:
+            duration: 5s
+            factor: 2
+            maxDuration: 5m
+        syncOptions:
+        - ServerSideApply=true
+        - CreateNamespace=true

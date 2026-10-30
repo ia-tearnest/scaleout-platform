@@ -1,0 +1,15 @@
+# ClusterConfig for Kargo webhook receivers
+# Note: Uses kargo-system-resources namespace for secrets (workaround for Kargo 1.9.2 bug)
+# See: docs/issues/kargo-1.9.2-webhook-cache-bug.md
+apiVersion: kargo.akuity.io/v1alpha1
+kind: ClusterConfig
+metadata:
+  name: cluster
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  webhookReceivers:
+  - name: github
+    github:
+      secretRef:
+        name: github-webhook-secret

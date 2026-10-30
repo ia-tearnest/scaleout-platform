@@ -1,0 +1,20 @@
+# -- Operator Deployment replicas
+replicaCount: 2
+
+# -- Ingress customizations
+ingress:
+  # -- Enable Ingress for Keycloak
+  enabled: true
+  useTraefik: false
+  # -- REQUIRED: Hostname to use for Ingress
+  # hostname: keycloak.localtest.me
+  # -- Ingress additional annotations
+  annotations: {}
+
+service:
+  annotations: {}
+
+db:
+  # expects a pgbouncer instance in the pgo namespace
+  # TODO: setup network policy (well, everywhere, but) to ensure access to PGO namespace where db is
+  host: pgo-pgbouncer.pgo.svc

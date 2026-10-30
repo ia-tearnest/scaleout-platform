@@ -1,0 +1,5 @@
+apiVersion: v2
+name: argocd-config
+description: ArgoCD AppProjects, Applications, and ExternalSecrets (applied after ArgoCD CRDs are ready)
+type: application
+version: 1.0.0

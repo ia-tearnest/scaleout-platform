@@ -1,0 +1,117 @@
+{{/*
+RBAC for allowing keycloak to read PGO-generated database credentials.
+The ServiceAccount lives in keycloak namespace, but needs read access here.
+*/}}
+{{- if .Values.keycloakSecretAccess }}
+{{- if .Values.keycloakSecretAccess.enabled }}
+# Role to read the keycloak user secret
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: keycloak-secret-reader
+  namespace: {{ .Release.Namespace }}
+rules:
+  - apiGroups: [""]
+    resources: ["secrets"]
+    resourceNames: ["{{ .Values.keycloakSecretAccess.secretName | default "pgo-pguser-keycloak" }}"]
+    verbs: ["get"]
+---
+# RoleBinding granting the keycloak ServiceAccount access
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: keycloak-reads-pgo-secrets
+  namespace: {{ .Release.Namespace }}
+roleRef:
+  kind: Role
+  name: keycloak-secret-reader
+  apiGroup: rbac.authorization.k8s.io
+subjects:
+  - kind: ServiceAccount
+    name: {{ .Values.keycloakSecretAccess.serviceAccountName | default "keycloak-pgo-reader" }}
+    namespace: {{ .Values.keycloakSecretAccess.keycloakNamespace | default "keycloak" }}
+{{- end }}
+{{- end }}
+---
+{{/*
+RBAC for allowing site namespaces to read PGO-generated ignition credentials.
+Uses a ClusterSecretStore so any site namespace can access the secret.
+*/}}
+{{- if .Values.ignitionSecretAccess }}
+{{- if .Values.ignitionSecretAccess.enabled }}
+# ServiceAccount for ESO to read ignition secrets
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: pgo-ignition-reader
+  namespace: {{ .Release.Namespace }}
+---
+# Role to read the ignition user secret
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: ignition-secret-reader
+  namespace: {{ .Release.Namespace }}
+rules:
+  - apiGroups: [""]
+    resources: ["secrets"]
+    resourceNames: ["{{ .Values.ignitionSecretAccess.secretName | default "pgo-pguser-ignition" }}"]
+    verbs: ["get"]
+---
+# RoleBinding granting the ServiceAccount access
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: ignition-reads-pgo-secrets
+  namespace: {{ .Release.Namespace }}
+roleRef:
+  kind: Role
+  name: ignition-secret-reader
+  apiGroup: rbac.authorization.k8s.io
+subjects:
+  - kind: ServiceAccount
+    name: pgo-ignition-reader
+    namespace: {{ .Release.Namespace }}
+{{- end }}
+{{- end }}
+---
+{{/*
+RBAC for allowing n8n namespace to read PGO-generated n8n credentials.
+*/}}
+{{- if .Values.n8nSecretAccess }}
+{{- if .Values.n8nSecretAccess.enabled }}
+# ServiceAccount for ESO to read n8n secrets
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: pgo-n8n-reader
+  namespace: {{ .Release.Namespace }}
+---
+# Role to read the n8n user secret
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: n8n-secret-reader
+  namespace: {{ .Release.Namespace }}
+rules:
+  - apiGroups: [""]
+    resources: ["secrets"]
+    resourceNames: ["{{ .Values.n8nSecretAccess.secretName | default "pgo-pguser-n8n" }}"]
+    verbs: ["get"]
+---
+# RoleBinding granting the ServiceAccount access
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: n8n-reads-pgo-secrets
+  namespace: {{ .Release.Namespace }}
+roleRef:
+  kind: Role
+  name: n8n-secret-reader
+  apiGroup: rbac.authorization.k8s.io
+subjects:
+  - kind: ServiceAccount
+    name: pgo-n8n-reader
+    namespace: {{ .Release.Namespace }}
+{{- end }}
+{{- end }}

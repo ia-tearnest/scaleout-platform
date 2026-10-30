@@ -1,0 +1,22 @@
+{{- if .Values.s3Modules.enabled }}
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: {{ .Release.Namespace }}-s3-modules
+spec:
+  capacity:
+    storage: 1Gi
+  accessModes:
+    - ReadOnlyMany
+  storageClassName: ""
+  claimRef:
+    namespace: {{ .Release.Namespace }}
+    name: s3-modules
+  mountOptions:
+    - region {{ .Values.s3Modules.region }}
+  csi:
+    driver: s3.csi.aws.com
+    volumeHandle: {{ .Release.Namespace }}-s3-modules-vol
+    volumeAttributes:
+      bucketName: {{ required "s3Modules.bucketName is required when s3Modules.enabled=true" .Values.s3Modules.bucketName }}
+{{- end }}

@@ -1,0 +1,122 @@
+{{- if .Values.stoker.enabled }}
+apiVersion: stoker.io/v1alpha1
+kind: GatewaySync
+metadata:
+  name: {{ .Release.Name }}
+  namespace: {{ .Release.Namespace }}
+spec:
+  git:
+    repo: {{ .Values.stoker.git.repo | quote }}
+    ref: {{ .Values.stoker.git.ref | quote }}
+    auth:
+      sshKey:
+        secretRef:
+          name: git-sync-secret
+          key: ssh
+        knownHosts:
+          secretRef:
+            name: git-sync-secret
+            key: known_hosts
+  polling:
+    enabled: {{ .Values.stoker.polling.enabled }}
+    interval: {{ .Values.stoker.polling.interval | quote }}
+  agent:
+    resources:
+      requests:
+        cpu: 50m
+        memory: 128Mi
+      limits:
+        cpu: 200m
+        memory: 512Mi
+  gateway:
+    port: 8043
+    tls: true
+    api:
+      secretName: ignition-api-key
+      secretKey: apiKey
+  sync:
+    defaults:
+      excludePatterns:
+        - "config/resources/core/ignition/gateway-network-outgoing/**"
+        - "**/gateway-network-incoming/**"
+        - "config/resources/core/ignition/tag-*/MQTT Engine/**"
+        - "config/resources/core/ignition/tag-*/System/**"
+    profiles:
+      siteBackend:
+        vars:
+          siteNumber: {{ .Values.siteNumber | quote }}
+        excludePatterns:
+          - "config/resources/core/ignition/tag-definition/default/**"
+        mappings:
+          - source: "services/site-backend/projects"
+            destination: "projects"
+          - source: "services/site-backend/config/resources/core"
+            destination: "config/resources/core"
+          - source: "services/site-backend/config/resources/{{ .Values.be.gateway.deploymentMode }}"
+            destination: "config/resources/{{ .Values.be.gateway.deploymentMode }}"
+            patches:
+              - file: "ignition/system-properties/config.json"
+                set:
+                  systemName: "site{{`{{.Vars.siteNumber}}`}}-be"
+          - source: "target-ref.json"
+            destination: "target-ref.json"
+            patches:
+              - set:
+                  version: "{{`{{.Ref}}`}}"
+      siteFrontend:
+        vars:
+          siteNumber: {{ .Values.siteNumber | quote }}
+        excludePatterns:
+          - "config/resources/core/ignition/tag-definition/default/**"
+        mappings:
+          - source: "services/site-frontend/projects"
+            destination: "projects"
+          - source: "services/site-frontend/config/resources/core"
+            destination: "config/resources/core"
+          - source: "services/site-frontend/config/resources/{{ .Values.fe.gateway.deploymentMode }}"
+            destination: "config/resources/{{ .Values.fe.gateway.deploymentMode }}"
+            patches:
+              - file: "ignition/system-properties/config.json"
+                set:
+                  systemName: "site{{`{{.Vars.siteNumber}}`}}-fe"
+              - file: "ignition/tag-provider/SolarDemo/config.json"
+                set:
+                  settings.serverName: "site{{`{{.Vars.siteNumber}}`}}-be" # set serverName to BE site gateway
+              - file: "ignition/tag-provider/Global/config.json"
+                set:
+                  settings.serverName: "site{{`{{.Vars.siteNumber}}`}}-be" # set serverName to BE site gateway
+              - file: "ignition/alarm-journal/SolarDemoJournal/config.json"
+                set:
+                  settings.remoteGateway.targetServer: "site{{`{{.Vars.siteNumber}}`}}-be" # set targetServer to BE site gateway
+              - file: "com.inductiveautomation.historian/historian-provider/Solar/config.json"
+                set:
+                  settings.serverName: "site{{`{{.Vars.siteNumber}}`}}-be" # set serverName to BE site gateway
+          - source: "target-ref.json"
+            destination: "target-ref.json"
+            patches:
+              - set:
+                  version: "{{`{{.Ref}}`}}"
+      {{- range $i := until (int .Values.blockCount) }}
+      {{- $blockNum := add1 $i }}
+      block{{ $blockNum }}:
+        vars:
+          siteNumber: {{ $.Values.siteNumber | quote }}
+          blockNumber: {{ $blockNum | quote }}
+        mappings:
+          - source: "services/block/projects"
+            destination: "projects"
+          - source: "services/block/config/resources/core"
+            destination: "config/resources/core"
+          - source: "services/block/config/resources/{{ $.Values.blockDefaults.gateway.deploymentMode }}"
+            destination: "config/resources/{{ $.Values.blockDefaults.gateway.deploymentMode }}"
+            patches:
+              - file: "ignition/system-properties/config.json"
+                set:
+                  systemName: "block{{`{{.Vars.blockNumber}}`}}-site{{`{{.Vars.siteNumber}}`}}"
+          - source: "target-ref.json"
+            destination: "target-ref.json"
+            patches:
+              - set:
+                  version: "{{`{{.Ref}}`}}"
+      {{- end }}
+{{- end }}

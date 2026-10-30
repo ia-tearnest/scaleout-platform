@@ -1,0 +1,42 @@
+# Site Common - DEV Environment
+
+# Stoker — GitOps sync operator (ref updated by Kargo promotions)
+stoker:
+  enabled: true
+  git:
+    ref: 0.0.24
+
+database:
+  enabled: true
+
+# S3 Modules (AWS Mountpoint CSI Driver)
+s3Modules:
+  enabled: true
+  bucketName: example-dev-ignition-modules
+
+# YAML Anchors
+x-image: &image
+  tag: 8.3.10
+
+be:
+  image: *image
+  gateway:
+    dataVolumeStorageSize: 100Gi
+    envFrom:
+      - configMapRef:
+          name: site-env
+
+fe:
+  image: *image
+  gateway:
+    dataVolumeStorageSize: 100Gi
+    envFrom:
+      - configMapRef:
+          name: site-env
+
+block1:
+  image: *image
+  gateway:
+    envFrom:
+      - configMapRef:
+          name: block-1-env

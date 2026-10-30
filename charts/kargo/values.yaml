@@ -1,0 +1,23 @@
+kargo:
+  api:
+    # Disable TLS on the server (let ingress/ALB handle it)
+    tls:
+      enabled: false
+      terminatedUpstream: true
+    service:
+      type: ClusterIP
+    ingress:
+      enabled: true
+      ingressClassName: alb
+      tls:
+        enabled: false
+      pathType: Prefix
+
+  controller:
+    argocd:
+      integrationEnabled: true
+      namespace: argocd
+
+  # Enable RBAC for ArgoCD integration
+  rbac:
+    installClusterRoles: true

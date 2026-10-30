@@ -1,0 +1,74 @@
+apiVersion: postgres-operator.crunchydata.com/v1beta1
+kind: PostgresCluster
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+    postgres-operator.crunchydata.com/autoCreateUserSchema: "true"
+  name: pgo
+spec:
+  backups:
+    pgbackrest:
+      global:
+        repo1-retention-full: {{ .Values.backups.retentionFull | quote }}
+        repo1-retention-full-type: count
+      manual:
+        options:
+        - --type=full
+        repoName: repo1
+      repos:
+      - name: repo1
+        schedules:
+          full: 0 1 * * *
+        volume:
+          volumeClaimSpec:
+            accessModes:
+            - ReadWriteOnce
+            resources:
+              requests:
+                storage: 40Gi
+            storageClassName: {{ .Values.storage.className }}
+  instances:
+  - affinity:
+      podAntiAffinity:
+        requiredDuringSchedulingIgnoredDuringExecution:
+        - labelSelector:
+            matchLabels:
+              postgres-operator.crunchydata.com/cluster: pgo
+              postgres-operator.crunchydata.com/instance-set: instance1
+          topologyKey: topology.kubernetes.io/zone
+    dataVolumeClaimSpec:
+      accessModes:
+      - ReadWriteOnce
+      resources:
+        requests:
+          storage: {{ .Values.storage.data.size }}
+      storageClassName: {{ .Values.storage.className }}
+    name: instance1
+    replicas: 2
+    walVolumeClaimSpec:
+      accessModes:
+      - ReadWriteOnce
+      resources:
+        requests:
+          storage: 40Gi
+      storageClassName: {{ .Values.storage.className }}
+  port: 5432
+  postgresVersion: 16
+  proxy:
+    pgBouncer:
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - podAffinityTerm:
+              labelSelector:
+                matchLabels:
+                  postgres-operator.crunchydata.com/cluster: pgo
+                  postgres-operator.crunchydata.com/role: pgbouncer
+              topologyKey: topology.kubernetes.io/zone
+            weight: 1
+      port: 5432
+      replicas: 2
+  {{- with .Values.users }}
+  users:
+  {{- toYaml . | nindent 2 }}
+  {{- end }}

@@ -1,0 +1,54 @@
+# Site 1 common configuration (shared across all environments)
+siteNumber: 1
+
+# Stoker git repository (same for all environments, ref is set per-environment via Kargo)
+stoker:
+  git:
+    repo: "git@github.com:example-org/app.git"
+
+# External Secrets - use shared secret for all sites
+externalSecrets:
+  secretName: "example/platform/ignition-site"
+
+# Common ingress configuration (shared ALB annotations)
+x-ingress-common: &ingress-common
+  enabled: true
+  className: alb
+  annotations:
+    kubernetes.io/ingress.class: alb
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/backend-protocol: HTTPS
+    alb.ingress.kubernetes.io/ssl-policy: ELBSecurityPolicy-TLS13-1-3-PQ-2025-09
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTPS":443}]'
+    alb.ingress.kubernetes.io/healthcheck-path: /StatusPing
+    alb.ingress.kubernetes.io/healthcheck-protocol: HTTPS
+    alb.ingress.kubernetes.io/success-codes: "200"
+    alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:us-west-2:123456789012:certificate/00000000-0000-0000-0000-000000000000
+    external-dns.alpha.kubernetes.io/ttl: "60"
+  tls:
+    enabled: false
+
+
+# GAN anchor for site frontend and edge to connect to site backend gateway
+x-gan-config: &gan-config
+  gan:
+    outgoingConnections:
+      - host: site1-be
+        port: 8060
+
+be:
+  ingress:
+    <<: *ingress-common
+
+fe:
+  gateway:
+    <<: *gan-config
+  ingress:
+    <<: *ingress-common
+
+block1:
+  gateway:
+    <<: *gan-config
+  ingress:
+    <<: *ingress-common

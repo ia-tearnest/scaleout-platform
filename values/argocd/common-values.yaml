@@ -1,0 +1,6 @@
+cert-manager:
+  startupapicheck:
+    enabled: false
+  global:
+    leaderElection:
+      namespace: cert-manager

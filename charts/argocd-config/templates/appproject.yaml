@@ -1,0 +1,102 @@
+# Management Project
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: mgmt
+  namespace: argocd
+  annotations:
+    "helm.sh/resource-policy": keep
+    "argocd.argoproj.io/sync-options": "Prune=false"
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  description: "Management cluster infrastructure"
+  sourceRepos:
+    - "git@github.com:example-org/platform.git"
+  destinations:
+    - namespace: "*"
+      server: "https://kubernetes.default.svc"
+  clusterResourceWhitelist:
+    - group: "*"
+      kind: "*"
+
+---
+# Development Project
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: dev
+  namespace: argocd
+  annotations:
+    "helm.sh/resource-policy": keep
+    "argocd.argoproj.io/sync-options": "Prune=false"
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  description: "Development Environment"
+  sourceRepos:
+    - "git@github.com:example-org/platform.git"
+    - "https://charts.ia.io"
+  destinations:
+    - namespace: "*"
+      name: "dev"
+  clusterResourceWhitelist:
+    - group: "*"
+      kind: "*"
+  namespaceResourceWhitelist:
+    - group: "*"
+      kind: "*"
+
+---
+# Staging Project
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: stg
+  namespace: argocd
+  annotations:
+    "helm.sh/resource-policy": keep
+    "argocd.argoproj.io/sync-options": "Prune=false"
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  description: "Staging Environment"
+  sourceRepos:
+    - "git@github.com:example-org/platform.git"
+    - "https://charts.ia.io"
+  destinations:
+    - namespace: "*"
+      name: "stg"
+  clusterResourceWhitelist:
+    - group: "*"
+      kind: "*"
+  namespaceResourceWhitelist:
+    - group: "*"
+      kind: "*"
+
+---
+# Production Project
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: prd
+  namespace: argocd
+  annotations:
+    "helm.sh/resource-policy": keep
+    "argocd.argoproj.io/sync-options": "Prune=false"
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  description: "Production Environment"
+  sourceRepos:
+    - "git@github.com:example-org/platform.git"
+    - "https://charts.ia.io"
+  destinations:
+    - namespace: "*"
+      name: "prd"
+  clusterResourceWhitelist:
+    - group: "*"
+      kind: "*"
+  namespaceResourceWhitelist:
+    - group: "*"
+      kind: "*"

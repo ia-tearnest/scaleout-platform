@@ -1,0 +1,16 @@
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Warehouse
+metadata:
+  name: releases
+  namespace: kargo-example
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  interval: 10s
+  subscriptions:
+    - git:
+        repoURL: git@github.com:example-org/app.git
+        commitSelectionStrategy: SemVer
+        discoveryLimit: 10
+        strictSemvers: false
+        includePrereleases: true

@@ -1,0 +1,9 @@
+apiVersion: v2
+name: stoker-operator
+description: Stoker GitOps sync operator for Ignition gateway configuration
+type: application
+version: 0.1.0
+dependencies:
+  - name: stoker-operator
+    version: "0.7.0"
+    repository: "oci://ghcr.io/knorrlabs/charts"

@@ -1,0 +1,19 @@
+argo-cd:
+  server:
+    ingress:
+      enabled: true
+
+  dex:
+    enabled: false
+
+  # controller:
+  #   metrics:
+  #     enabled: true
+  #     serviceMonitor:
+  #       enabled: true
+
+  # repoServer:
+  #   metrics:
+  #     enabled: true
+  #     serviceMonitor:
+  #       enabled: true

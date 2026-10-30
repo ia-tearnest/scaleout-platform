@@ -1,0 +1,298 @@
+# Default values for site.
+
+# Shared GAN CA - when true, creates ClusterIssuer resources for cross-site GAN trust
+sharedGanCA:
+  create: false
+  name: site-gan-issuer
+  secretSync:
+    enabled: false
+
+# Site configuration
+siteNumber: 1
+blockCount: 1
+
+# Ignition image configuration (shared across all gateways)
+x-image: &ignition-image
+  tag: "8.3.7"
+
+# Site gateway service name for GAN connections (block gateways connect to this)
+# Template: {release}-site-gateway
+siteGatewayHost: ""
+
+# ============================================================================
+# YAML Anchors - INTERNAL ONLY, DO NOT OVERRIDE
+# ============================================================================
+x-common:
+  preconfigure: &common-preconfigure
+    additionalCmds:
+      - '[ -f "/data/commissioning.json" ] || echo "{}" > /data/commissioning.json'
+
+# ============================================================================
+# Solar Configuration
+# Override in values/site#/{env}/values.yaml for site-specific settings
+# ============================================================================
+site:
+  siteName: "Site 1"
+  location: "Austin, TX"
+  blockCount: 2
+
+# ============================================================================
+# Stoker — GitOps sync operator
+# ============================================================================
+stoker:
+  enabled: false  # enabled per-environment in site-common/{env}/values.yaml
+  git:
+    repo: ""  # set in values/{site}/common-values.yaml
+    ref: ""   # updated by Kargo promotions via site-common/{env}/values.yaml
+
+  # Polling acts as a recovery safety net
+  polling:
+    enabled: true
+    interval: "5m"
+
+# ============================================================================
+# External Secrets Configuration
+# ============================================================================
+externalSecrets:
+  clusterSecretStore: "aws-secrets-manager"
+  secretName: ""  # defaults to namespace
+  refreshInterval: "1h"
+
+# ============================================================================
+# Database Configuration
+# ============================================================================
+# When enabled, pulls credentials from PGO-generated secret via ClusterSecretStore
+database:
+  enabled: false
+  pgoSecretName: "pgo-pguser-ignition"
+
+# ============================================================================
+# S3 Modules Storage
+# ============================================================================
+# Uses AWS Mountpoint S3 CSI Driver for external Ignition modules (.modl files)
+s3Modules:
+  enabled: false
+  bucketName: ""
+  region: us-west-2
+
+# ============================================================================
+# Block Defaults - Applied to all block edge gateways
+# ============================================================================
+blockDefaults:
+  image: &block-image
+    <<: *ignition-image
+  commissioning: &block-commissioning
+    acceptIgnitionEULA: true
+    edition: edge
+    auth:
+      adminUsername: ""
+  gateway: &block-gateway
+    persistentVolumeClaimRetentionPolicy: Delete
+    dataVolumeStorageSize: 15Gi
+    redundancy:
+      enabled: false
+    tls:
+      enabled: true
+    replicas: 1
+    deploymentMode: ""
+    externalModules:
+      enabled: true
+      pvcName: s3-modules
+      mountReadOnly: false
+      createOptions: {}  # created by site be gateway
+    licensing:
+      leasedActivation:
+        secretName: "block-leased-license"
+    gan:
+      outgoingConnections:
+        - host: ""  # Set to {release-name}-site-gateway in values
+          port: 8060
+    env:
+      TZ: America/Los_Angeles
+      GATEWAY_MODULES_ENABLED: |
+        com.inductiveautomation.perspective,
+        com.inductiveautomation.historian,
+        com.inductiveautomation.opcua,
+        com.inductiveautomation.alarm-notification
+    jvmArgs:
+      - -Dignition.license.leased-activation-terminate-sessions-on-shutdown=true
+    resourcesEnabled: true
+    resources:
+      limits:
+        cpu: 2000m
+        memory: 8Gi
+      requests:
+        cpu: 500m
+        memory: 2Gi
+    preconfigure: *common-preconfigure
+  certManager: &block-cert-manager
+    enabled: true
+    ganIssuer:
+      create: false
+      nameOverride: site-gan-issuer
+    tlsIssuer:
+      create: false
+      nameOverride: selfsigned-issuer
+      kind: Issuer
+    tlsCertificate:
+      create: true
+
+
+# ============================================================================
+# Site Backend Gateway (Standard Edition)
+# ============================================================================
+be:
+  podAnnotations:
+    stoker.io/inject: "true"
+    stoker.io/profile: siteBackend
+  image: *ignition-image
+  commissioning:
+    acceptIgnitionEULA: true
+    edition: standard
+    auth:
+      adminUsername: ""
+  gateway:
+    persistentVolumeClaimRetentionPolicy: Delete
+    dataVolumeStorageSize: 30Gi
+    redundancy:
+      enabled: false
+    tls:
+      enabled: true
+    replicas: 1
+    deploymentMode: ""
+    systemNameUseIndexed: false
+    externalModules:
+      enabled: true
+      pvcName: s3-modules
+      mountReadOnly: false
+      createOptions:
+        accessMode: ReadOnlyMany
+        size: 1Gi
+        helmResourcePolicy: delete
+        other:
+          storageClassName: ""
+    licensing:
+      leasedActivation:
+        secretName: "site-leased-license"
+    env:
+      TZ: America/Los_Angeles
+      GATEWAY_MODULES_ENABLED: |
+        com.inductiveautomation.perspective,
+        com.inductiveautomation.webdev,
+        com.inductiveautomation.historian,
+        com.inductiveautomation.historian.sql,
+        com.inductiveautomation.opcua,
+        com.inductiveautomation.alarm-notification,
+        com.inductiveautomation.reporting,
+        com.inductiveautomation.eventstream
+    jvmArgs:
+      - -Dignition.license.leased-activation-terminate-sessions-on-shutdown=true
+    resourcesEnabled: true
+    resources:
+      limits:
+        cpu: 4000m
+        memory: 16Gi
+      requests:
+        cpu: 1000m
+        memory: 4Gi
+    preconfigure: *common-preconfigure
+    envFrom:
+      - configMapRef:
+          name: site-env
+  certManager:
+    enabled: true
+    ganIssuer:
+      nameOverride: site-gan-issuer
+      spec:
+        issuerRefName: selfsigned-issuer
+        issuerRefKind: Issuer
+    tlsIssuer:
+      create: false
+      nameOverride: selfsigned-issuer
+      kind: Issuer
+    tlsCertificate:
+      create: true
+
+# ============================================================================
+# Site Frontend Gateway (Standard Edition)
+# ============================================================================
+fe:
+  podAnnotations:
+    stoker.io/inject: "true"
+    stoker.io/profile: siteFrontend
+  image: *ignition-image
+  commissioning:
+    acceptIgnitionEULA: true
+    edition: standard
+    auth:
+      adminUsername: ""
+  gateway:
+    persistentVolumeClaimRetentionPolicy: Delete
+    dataVolumeStorageSize: 30Gi
+    redundancy:
+      enabled: false
+    tls:
+      enabled: true
+    replicas: 1
+    deploymentMode: ""
+    systemNameUseIndexed: false
+    externalModules:
+      enabled: true
+      pvcName: s3-modules
+      mountReadOnly: false
+      createOptions: {}  # PVC created by be; fe only references it
+    licensing:
+      leasedActivation:
+        secretName: "site-leased-license"
+    env:
+      TZ: America/Los_Angeles
+      GATEWAY_MODULES_ENABLED: |
+        com.inductiveautomation.perspective,
+        com.inductiveautomation.webdev,
+        com.inductiveautomation.historian,
+        com.inductiveautomation.historian.sql,
+        com.inductiveautomation.opcua,
+        com.inductiveautomation.alarm-notification,
+        com.inductiveautomation.reporting,
+        com.inductiveautomation.eventstream
+    jvmArgs:
+      - -Dignition.license.leased-activation-terminate-sessions-on-shutdown=true
+    resourcesEnabled: true
+    resources:
+      limits:
+        cpu: 4000m
+        memory: 16Gi
+      requests:
+        cpu: 1000m
+        memory: 4Gi
+    preconfigure: *common-preconfigure
+    envFrom:
+      - configMapRef:
+          name: site-env
+  certManager:
+    enabled: true
+    ganIssuer:
+      create: false  # Issuer created by be; fe only references it
+      nameOverride: site-gan-issuer
+    tlsIssuer:
+      create: false
+      nameOverride: selfsigned-issuer
+      kind: Issuer
+    tlsCertificate:
+      create: true
+
+# ============================================================================
+# Block Gateways (Edge Edition) - Use anchors, only unique values specified
+# ============================================================================
+block1:
+  podAnnotations:
+    stoker.io/inject: "true"
+    stoker.io/profile: block1
+  image: *block-image
+  commissioning: *block-commissioning
+  gateway:
+    <<: *block-gateway
+    envFrom:
+      - configMapRef:
+          name: block-1-env
+  certManager: *block-cert-manager
